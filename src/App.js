@@ -87,24 +87,18 @@ function App() {
         <button onClick={handleSearch} disabled={loading}>Pesquisar</button>
       </div>
 
-      {searchResults && (
-        <div className="result">
-          <h2>Resultados da pesquisa</h2>
-          {searchResults.length === 0 ? (
-            <p>Nenhum documento encontrado.</p>
-          ) : (
-            <ul>
-              {searchResults.map((doc, idx) => (
-                <li key={idx}>
-                  <strong>{doc.nome}</strong> - Tipo: {doc.tipo}, Matrícula: {doc.matricula}, Data: {doc.data}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
+      {searchResults.length === 0 ? (
+  <p>Nenhum documento encontrado.</p>
+) : (
+  <ul>
+    {searchResults.map((doc, idx) => (
+      <li key={idx}>
+        <strong>{doc.nome}</strong> - Tipo: {doc.tipo}, Matrícula: {doc.matricula}, Data: {doc.data}
+      </li>
+    ))}
+  </ul>
+)}
+
 }
 
 export default App;
