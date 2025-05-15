@@ -1,91 +1,110 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState } from 'react';
 
-export default function App() {
+const backendUrl = 'https://egar-app.onrender.com';
+
+function App() {
   const [files, setFiles] = useState([]);
-  const [resultados, setResultados] = useState([]);
-  const [matricula, setMatricula] = useState("");
-  const [data, setData] = useState("");
+  const [uploadResult, setUploadResult] = useState(null);
+  const [matricula, setMatricula] = useState('');
+  const [data, setData] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleUpload = async () => {
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    setLoading(true);
-    try {
-      const response = await axios.post("https://egar-app.onrender.com/upload/", formData);
-      setResultados(response.data.transportes);
-    } catch (error) {
-      alert("Erro ao carregar os ficheiros");
-    }
-    setLoading(false);
+  const handleFileChange = (e) => {
+    setFiles(e.target.files);
   };
 
-  const handlePesquisar = async () => {
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      alert('Por favor, seleciona ficheiros para enviar.');
+      return;
+    }
+    setLoading(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
     try {
-      const response = await axios.get("https://egar-app.onrender.com/pesquisar/", {
-        params: {
-          matricula,
-          data,
-        },
+      const res = await fetch(`${backendUrl}/upload/`, {
+        method: 'POST',
+        body: formData,
       });
-      setResultados([{
-        transporte_id: "pesquisa",
-        documentos: response.data.resultados,
-      }]);
+      const data = await res.json();
+      setUploadResult(data);
     } catch (error) {
-      alert("Erro na pesquisa");
+      alert('Erro no upload.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!matricula) {
+      alert('Por favor, insere uma matrícula para pesquisa.');
+      return;
+    }
+    setLoading(true);
+    try {
+      let url = `${backendUrl}/pesquisar/?matricula=${encodeURIComponent(matricula)}`;
+      if (data) {
+        url += `&data=${encodeURIComponent(data)}`;
+      }
+      const res = await fetch(url);
+      const dataRes = await res.json();
+      setSearchResults(dataRes.resultados);
+    } catch (error) {
+      alert('Erro na pesquisa.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">📁 EGAR - Gestor de Documentos</h1>
+    <div className="container">
+      <h1>EGAR - Upload e Pesquisa</h1>
 
-      <div className="mb-4">
-        <input type="file" multiple onChange={(e) => setFiles([...e.target.files])} />
-        <button
-          onClick={handleUpload}
-          className="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {loading ? "A carregar..." : "Carregar Ficheiros"}
-        </button>
+      <div>
+        <label>Seleciona ficheiros PDF para upload:</label>
+        <input type="file" multiple onChange={handleFileChange} accept=".pdf" />
+        <button onClick={handleUpload} disabled={loading}>Enviar</button>
       </div>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Matrícula (ex: AB-12-CD)"
-          className="border px-2 py-1 mr-2"
-          value={matricula}
-          onChange={(e) => setMatricula(e.target.value)}
-        />
-        <input
-          type="date"
-          className="border px-2 py-1 mr-2"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-        />
-        <button
-          onClick={handlePesquisar}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          Pesquisar
-        </button>
-      </div>
-
-      {resultados.map((transporte, idx) => (
-        <div key={idx} className="mb-6 border p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">🛻 Transporte {transporte.transporte_id}</h2>
-          <ul>
-            {transporte.documentos.map((doc, i) => (
-              <li key={i} className="text-sm mb-1">
-                📄 <strong>{doc.tipo}</strong> - {doc.nome} ({doc.data || "sem data"})
-              </li>
-            ))}
-          </ul>
+      {uploadResult && (
+        <div className="result">
+          <h2>Upload Resultado</h2>
+          <pre>{JSON.stringify(uploadResult, null, 2)}</pre>
         </div>
-      ))}
+      )}
+
+      <hr />
+
+      <div>
+        <h2>Pesquisar documentos</h2>
+        <label>Matrícula:</label>
+        <input type="text" value={matricula} onChange={e => setMatricula(e.target.value)} />
+        <label>Data (YYYY-MM-DD):</label>
+        <input type="date" value={data} onChange={e => setData(e.target.value)} />
+        <button onClick={handleSearch} disabled={loading}>Pesquisar</button>
+      </div>
+
+      {searchResults && (
+        <div className="result">
+          <h2>Resultados da pesquisa</h2>
+          {searchResults.length === 0 ? (
+            <p>Nenhum documento encontrado.</p>
+          ) : (
+            <ul>
+              {searchResults.map((doc, idx) => (
+                <li key={idx}>
+                  <strong>{doc.nome}</strong> - Tipo: {doc.tipo}, Matrícula: {doc.matricula}, Data: {doc.data}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+export default App;
